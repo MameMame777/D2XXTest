@@ -103,7 +103,30 @@ D2XXTest/
 
 ## Build
 
-### Windows (MSVC x64)
+### Bazel (推奨 — Windows / Linux 共通)
+
+**前提**: [Bazel](https://bazel.build/install) または [Bazelisk](https://github.com/bazelbuild/bazelisk) をインストール済みであること。
+
+```bash
+# 全ターゲットをビルド
+bazel build //...
+
+# 個別ターゲット
+bazel build //:test_debug
+
+# 実行
+bazel run //:test_debug
+```
+
+出力バイナリは `bazel-bin/` に生成されます（例: `bazel-bin/test_debug`）。
+
+> **Windows** では Bazel が MSVC を自動検出します。Visual Studio 2022 がインストール済みであれば追加設定は不要です。
+
+---
+
+### CMake (従来の方法)
+
+#### Windows (MSVC x64)
 
 ```powershell
 cmake -B build -G "Visual Studio 17 2022" -A x64

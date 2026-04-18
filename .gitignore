@@ -3,6 +3,9 @@ build/
 build_wsl/
 out/
 
+# Bazel build outputs (symlinks created in workspace root)
+bazel-*
+
 # VS / MSVC
 .vs/
 *.vcxproj.user

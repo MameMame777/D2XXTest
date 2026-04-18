@@ -1,0 +1,41 @@
+load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
+
+package(default_visibility = ["//visibility:public"])
+
+# ---------------------------------------------------------------------------
+# Static library: d2xx_mpsse
+#
+# Headers reside in include/d2xx_mpsse/*.hpp and are exported with
+# strip_include_prefix so that consumers include them as:
+#   #include "d2xx_mpsse/MpsseDevice.hpp"
+# ---------------------------------------------------------------------------
+cc_library(
+    name = "d2xx_mpsse",
+    srcs = [
+        "src/Eeprom.cpp",
+        "src/Gpio.cpp",
+        "src/MpsseDevice.cpp",
+        "src/SpiMaster.cpp",
+    ],
+    hdrs = glob(["include/d2xx_mpsse/*.hpp"]),
+    strip_include_prefix = "include",
+    deps = ["//third_party/ftd2xx:ftd2xx"],
+)
+
+# ---------------------------------------------------------------------------
+# Helper macro — one cc_binary per test source
+# ---------------------------------------------------------------------------
+[
+    cc_binary(
+        name = name,
+        srcs = ["tests/{}.cpp".format(name)],
+        deps = [":d2xx_mpsse"],
+    )
+    for name in [
+        "test_open",
+        "test_loopback",
+        "test_eeprom_ftdi",
+        "test_eeprom_spi",
+        "test_debug",
+    ]
+]

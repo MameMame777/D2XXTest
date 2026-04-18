@@ -291,7 +291,7 @@ void MpsseDevice::flush() {
 
 // ---------------------------------------------------------------------------
 uint8_t MpsseDevice::readPins(bool highByte) {
-    const uint8_t cmd[2] = { highByte ? 0x83u : 0x81u, 0x87u };
+    const uint8_t cmd[2] = { static_cast<uint8_t>(highByte ? 0x83u : 0x81u), 0x87u };
     write(std::span<const uint8_t>(cmd));
     return read(1)[0];
 }

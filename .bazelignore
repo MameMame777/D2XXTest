@@ -1,0 +1,8 @@
+# Bazel output symlinks — generated automatically in the workspace root.
+# Prevents nested Bazel invocations (e.g., WSL2 after a Windows build) from
+# accidentally traversing into the host platform's output tree.
+bazel-bin
+bazel-out
+bazel-testlogs
+bazel-D2XXTest
+bazel-d2xxtest
