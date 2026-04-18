@@ -72,6 +72,10 @@ public:
     /// Call after queuing commands that expect a response.
     void flush();
 
+    /// Read GPIO pin states through the MPSSE engine.
+    /// @param highByte false=low byte (0x81), true=high byte (0x83)
+    uint8_t readPins(bool highByte = false);
+
     // -----------------------------------------------------------------------
     // Direct D2XX handle access
     // -----------------------------------------------------------------------
@@ -83,6 +87,7 @@ public:
     /// Read the instantaneous pin state of the low byte via FT_GetBitMode.
     /// In MPSSE mode this returns the last-written output register value for
     /// output pins, allowing software verification of GPIO commands.
+    /// For GPIO readback via MPSSE commands, prefer readPins().
     /// bit0=SCK, bit1=MOSI, bit2=MISO, bit3=CS#, bit4-7=GPIO
     uint8_t getBitMode();
 

@@ -68,7 +68,6 @@ private:
     uint8_t      value_{0x00};      ///< Last-written output value
 
     uint8_t cmdSet()  const noexcept { return (bank_ == Bank::Low) ? 0x80u : 0x82u; }
-    uint8_t cmdRead() const noexcept { return (bank_ == Bank::Low) ? 0x81u : 0x83u; }
 
     void applyOutput();
 };
