@@ -1,0 +1,48 @@
+# CMake build directories
+build/
+build_wsl/
+out/
+
+# VS / MSVC
+.vs/
+*.vcxproj.user
+*.VC.db
+*.VC.opendb
+CMakeSettings.json
+
+# Compiled objects
+*.obj
+*.lib
+*.exp
+*.pdb
+*.ilk
+*.exe
+*.dll
+
+# Generated import library (created from ftd2xx.def — not SDK)
+third_party/ftd2xx/ftd2xx.lib
+third_party/ftd2xx/ftd2xx.exp
+
+# FTDI D2XX SDK files — must be obtained separately from ftdichip.com
+# https://ftdichip.com/drivers/d2xx-drivers/
+third_party/ftd2xx/ftd2xx.h
+third_party/ftd2xx/WinTypes.h
+third_party/ftd2xx/ftd2xx.def
+third_party/ftd2xx/libftd2xx/
+third_party/ftd2xx/amd64/
+third_party/ftd2xx/i386/
+third_party/ftd2xx/Static/
+third_party/ftd2xx/*.so
+third_party/ftd2xx/*.so.*
+third_party/ftd2xx/*.a
+
+# Test output
+test_results.log
+test_debug_out.txt
+*.log
+
+# Editor / OS
+.vscode/settings.json
+.vscode/*.log
+Thumbs.db
+.DS_Store
