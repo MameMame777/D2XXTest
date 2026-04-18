@@ -10,7 +10,8 @@ Channel B (D2XX device index 1).
 
 | OS | コンパイラ | ビルド方法 | 結果 |
 |---|---|---|---|
-| Windows 11 (x64) | MSVC 19.44 (VS2022) | CMake + Visual Studio | ✅ 全テスト PASS |
+| Windows 11 (x64) | MSVC 19.44 (VS2022) | Bazel 9 (Bazelisk) | ✅ 全テスト PASS |
+| Ubuntu 24.04 on WSL2 (x86_64) | GCC 13.3.0 | Bazel 9 (Bazelisk) | ✅ 全テスト PASS |
 | Ubuntu 24.04 on WSL2 (x86_64) | GCC 13.3.0 | g++ 直接 (静的リンク) | ✅ 全テスト PASS |
 
 > WSL2 で USB デバイスを使用するには **usbipd-win** によるパススルーが必要です。
@@ -54,11 +55,20 @@ BCBUS0-7      High-byte GPIO
 
 ## Requirements
 
-- **FTDI D2XX SDK** — headers (`ftd2xx.h`, `WinTypes.h`) and import library (`ftd2xx.lib`)
+- **FTDI D2XX SDK** — headers (`ftd2xx.h`, `WinTypes.h`) and import library
   - Place in `third_party/ftd2xx/libftd2xx/` (official SDK zip layout) **or**
     directly in `third_party/ftd2xx/`
   - See [`third_party/ftd2xx/README.txt`](third_party/ftd2xx/README.txt) for details
-- **CMake** ≥ 3.20
+- **[Bazelisk](https://github.com/bazelbuild/bazelisk)** — Bazel のバージョン管理ラッパー
+    ```powershell
+    # Windows
+    winget install --id Bazel.Bazelisk
+    ```
+    ```bash
+    # Linux
+    curl -Lo /usr/local/bin/bazelisk https://github.com/bazelbuild/bazelisk/releases/latest/download/bazelisk-linux-amd64
+    chmod +x /usr/local/bin/bazelisk
+    ```
 - **C++20** compiler
   - Windows: MSVC (Visual Studio 2022 recommended)
   - Linux: GCC 11+ / Clang 13+
@@ -71,7 +81,11 @@ BCBUS0-7      High-byte GPIO
 
 ```
 D2XXTest/
-├── CMakeLists.txt
+├── BUILD.bazel             ← Bazel: d2xx_mpsse ライブラリ + テストバイナリ
+├── MODULE.bazel            ← Bazel: 外部依存 (rules_cc, platforms)
+├── WORKSPACE               ← Bazel: ワークスペース定義
+├── .bazelrc                ← Bazel: C++20 / 警告フラグ
+├── .bazelignore            ← Bazel: クロスプラットフォーム干渉防止
 ├── include/
 │   └── d2xx_mpsse/
 │       ├── MpsseDevice.hpp
@@ -91,6 +105,7 @@ D2XXTest/
 │   └── test_debug.cpp
 ├── third_party/
 │   └── ftd2xx/
+│       ├── BUILD.bazel         ← Bazel: ftd2xx cc_import (Windows/Linux 自動選択)
 │       ├── README.txt          ← SDK placement guide
 │       └── libftd2xx/          ← Place SDK headers here (not committed)
 │           ├── ftd2xx.h
@@ -124,29 +139,9 @@ bazel run //:test_debug
 
 ---
 
-### CMake (従来の方法)
+### Linux (GCC) — g++ 直接ビルド
 
-#### Windows (MSVC x64)
-
-```powershell
-cmake -B build -G "Visual Studio 17 2022" -A x64
-cmake --build build --config Release
-```
-
-Executables are written to `build\bin\Release\`.
-
-### Linux (GCC) — CMake を使う場合
-
-```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
-```
-
-Executables are written to `build/bin/`.
-
-### Linux (GCC) — CMake なしで直接ビルドする場合
-
-CMake がない環境では `g++` 1コマンドでビルドできます:
+`g++` 1コマンドでビルドできます:
 
 ```bash
 # ライブラリをコンパイルしてアーカイブ
@@ -180,10 +175,10 @@ LD_LIBRARY_PATH=third_party/ftd2xx ./${TARGET}
 ```bash
 # Ubuntu / Debian
 sudo apt update
-sudo apt install -y git cmake g++ libusb-1.0-0
+sudo apt install -y git g++ libusb-1.0-0
 
 # Fedora / RHEL
-sudo dnf install -y git cmake gcc-c++ libusb1
+sudo dnf install -y git gcc-c++ libusb1
 ```
 
 ### リポジトリの取得
@@ -255,39 +250,39 @@ lsusb | grep 0403
 
 ### ビルド
 
+#### Bazel (推奨)
+
 ```bash
-cmake -B build -DCMAKE_BUILD_TYPE=Release
-cmake --build build -j$(nproc)
+# bazelisk を /usr/local/bin に配置済みの場合
+bazelisk build //...
 ```
 
-ビルド成功時の出力:
+ビルド成功時の出力 (`bazel-bin/` 以下):
 ```
-build/bin/test_open
-build/bin/test_loopback
-build/bin/test_eeprom_ftdi
-build/bin/test_eeprom_spi
-build/bin/test_debug
+bazel-bin/test_open
+bazel-bin/test_loopback
+bazel-bin/test_eeprom_ftdi
+bazel-bin/test_eeprom_spi
+bazel-bin/test_debug
 ```
+
+> **注意**: WSL2 上で Bazel を実行する場合、Windows 側で既に `bazel build` を
+> 実行済みだと `bazel-*` シンボリックリンクが干渉することがあります。
+> その場合は `--output_base` でLinux側に出力先を分離してください:
+> ```bash
+> bazelisk --output_base=/tmp/bazel_d2xxtest build //...
+> ```
 
 ### テスト実行
 
-共有ライブラリのパスを設定してから実行します
-(静的リンクの場合は `LD_LIBRARY_PATH` 不要):
+#### Bazel
 
 ```bash
-export LD_LIBRARY_PATH=$PWD/third_party/ftd2xx:$LD_LIBRARY_PATH
+# USBアクセスのため root で実行
+sudo bazelisk run //:test_debug
 
-# デバイス認識確認
-./build/bin/test_open
-
-# 内部ループバック
-./build/bin/test_loopback
-
-# FTDI 内蔵 EEPROM 読み出し
-./build/bin/test_eeprom_ftdi
-
-# 4 ステップ デバッグ確認
-./build/bin/test_debug
+# または直接バイナリを実行
+sudo bazel-bin/test_debug
 ```
 
 ### トラブルシューティング
@@ -297,7 +292,7 @@ export LD_LIBRARY_PATH=$PWD/third_party/ftd2xx:$LD_LIBRARY_PATH
 | `FT_DEVICE_NOT_FOUND` | `lsusb` で 0403:6010 が見えるか確認。`ftdi_sio` が残っていないか `lsmod` で確認 |
 | `FT_INVALID_HANDLE` または permission error | udev ルールが適用されているか確認。または `sudo` で実行 |
 | `libftd2xx.so: No such file` | `LD_LIBRARY_PATH` の設定を確認 |
-| チャンネルが見つからない | `./build/bin/test_open` でインデックスを確認してから他のテストを実行 |
+| チャンネルが見つからない | `bazelisk run //:test_open` でインデックスを確認してから他のテストを実行 |
 
 ---
 
@@ -329,15 +324,30 @@ usbipd attach --wsl --busid <BUSID>
 ### 3. WSL2 側で ftdi_sio をアンバインド
 
 ```bash
-# root で実行 (sudo パスワード不要)
-wsl -d Ubuntu-24.04 -u root bash -c "\
-  echo '1-1:1.0' > /sys/bus/usb/drivers/ftdi_sio/unbind 2>/dev/null; \
-  echo '1-1:1.1' > /sys/bus/usb/drivers/ftdi_sio/unbind 2>/dev/null"
+# インターフェース番号を確認 (例: 1-2:1.0, 1-2:1.1)
+wsl -d Ubuntu-24.04 -- ls /sys/bus/usb/drivers/ftdi_sio/
+
+# 確認した番号を使ってアンバインド (root で実行、パスワード不要)
+wsl -d Ubuntu-24.04 -u root bash -c "
+  for iface in \$(ls /sys/bus/usb/drivers/ftdi_sio/ | grep ':'); do
+    echo \$iface > /sys/bus/usb/drivers/ftdi_sio/unbind 2>/dev/null
+  done"
 ```
 
-> インターフェース番号 (`1-1:1.0`) は `ls /sys/bus/usb/drivers/ftdi_sio/` で確認できます。
+> インターフェース番号 (`1-1:1.x` や `1-2:1.x`) は USB アタッチのたびに変わることがあります。
+> 上記のループで自動検出するのが確実です。
 
 ### 4. テスト実行
+
+#### Bazel ビルドの場合
+
+```bash
+# bazel-bin 内のバイナリを直接実行
+wsl -d Ubuntu-24.04 -u root bash -c \
+  "bazelisk --output_base=/tmp/bazel_d2xxtest run //:test_debug"
+```
+
+#### g++ 直接ビルドの場合
 
 ```bash
 wsl -d Ubuntu-24.04 -u root bash -c \
@@ -356,29 +366,19 @@ usbipd detach --busid <BUSID>
 
 ### Run all tests
 
-```powershell
-# Windows
-.\build\bin\Release\test_open.exe
-.\build\bin\Release\test_loopback.exe
-.\build\bin\Release\test_eeprom_ftdi.exe
-.\build\bin\Release\test_eeprom_spi.exe
-.\build\bin\Release\test_debug.exe
-```
-
 ```bash
-# Linux
-./build/bin/test_open
-./build/bin/test_loopback
-./build/bin/test_eeprom_ftdi
-./build/bin/test_eeprom_spi
-./build/bin/test_debug
+bazelisk run //:test_open
+bazelisk run //:test_loopback
+bazelisk run //:test_eeprom_ftdi
+bazelisk run //:test_eeprom_spi
+bazelisk run //:test_debug
 ```
 
 Default channel index is **1** (FT4232H Channel B).
 Pass a different index as the first argument:
 
 ```bash
-./build/bin/test_open 0     # Channel A
+bazelisk run //:test_open -- 0    # Channel A
 ```
 
 ### 4-step debug procedure
@@ -391,15 +391,8 @@ Pass a different index as the first argument:
 4. **SPI transfer** — send `{0xAA, 0x55, 0xFF, 0x00}` with internal loopback, verify TX == RX
 
 ```bash
-# Linux
-./build/bin/test_debug        # channel 1 (default = FT4232H CH-B)
-./build/bin/test_debug 0      # channel 0 (CH-A)
-```
-
-```powershell
-# Windows
-.\build\bin\Release\test_debug.exe
-.\build\bin\Release\test_debug.exe 0
+bazelisk run //:test_debug          # channel 1 (default)
+bazelisk run //:test_debug -- 0     # channel 0 (CH-A)
 ```
 
 ---
