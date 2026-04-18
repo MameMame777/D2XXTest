@@ -290,6 +290,13 @@ void MpsseDevice::flush() {
 }
 
 // ---------------------------------------------------------------------------
+uint8_t MpsseDevice::readPins(bool highByte) {
+    const uint8_t cmd[2] = { highByte ? 0x83u : 0x81u, 0x87u };
+    write(std::span<const uint8_t>(cmd));
+    return read(1)[0];
+}
+
+// ---------------------------------------------------------------------------
 uint8_t MpsseDevice::getBitMode() {
     auto* h = static_cast<FT_HANDLE>(handle_);
     UCHAR mode = 0;

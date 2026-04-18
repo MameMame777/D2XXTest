@@ -43,11 +43,7 @@ void Gpio::applyOutput() {
 // ---------------------------------------------------------------------------
 
 uint8_t Gpio::read() {
-    // Issue the GPIO read command followed by "Send Immediate" (0x87) so the
-    // FTDI chip flushes the 1-byte response without waiting for the latency timer.
-    const uint8_t cmd[2] = { cmdRead(), 0x87u };
-    dev_.write(std::span<const uint8_t>(cmd));
-    return dev_.read(1)[0];
+    return dev_.readPins(bank_ == Bank::High);
 }
 
 bool Gpio::getPin(int pin) {
