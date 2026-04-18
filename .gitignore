@@ -1,4 +1,4 @@
-# CMake build directories
+# Build output directories
 build/
 build_wsl/
 out/
@@ -11,7 +11,6 @@ bazel-*
 *.vcxproj.user
 *.VC.db
 *.VC.opendb
-CMakeSettings.json
 
 # Compiled objects
 *.obj
